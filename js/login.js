@@ -23,18 +23,8 @@ passwordToggle.addEventListener('click', () => {
 
 document.getElementById('forgotPassword').addEventListener('click', event => {
   event.preventDefault();
-  message.textContent = 'Demo access is shown below the form.';
+  message.textContent = 'Please enter your registered email and password to sign in.';
 });
-
-const demoNote = document.querySelector('.demo-note');
-if (demoNote) {
-  demoNote.style.cursor = 'pointer';
-  demoNote.title = 'Click to fill demo credentials';
-  demoNote.addEventListener('click', () => {
-    document.getElementById('email').value = 'demo@limitbreak.app';
-    password.value = 'limitbreak';
-  });
-}
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
