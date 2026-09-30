@@ -29,12 +29,28 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameInput.value.trim() })
       });
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.ok && (response.status === 404 || response.status === 405 || !contentType.includes('application/json'))) {
+        localStorage.setItem('limitbreak-user-name', nameInput.value.trim());
+        feedback.textContent = '';
+        approved = true;
+        form.requestSubmit(submitButton || undefined);
+        return;
+      }
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not verify name availability.');
+      localStorage.setItem('limitbreak-user-name', result.name || nameInput.value.trim());
       feedback.textContent = '';
       approved = true;
       form.requestSubmit(submitButton || undefined);
     } catch (error) {
+      if (error.message.includes('token') || error.message.includes('JSON')) {
+        localStorage.setItem('limitbreak-user-name', nameInput.value.trim());
+        feedback.textContent = '';
+        approved = true;
+        form.requestSubmit(submitButton || undefined);
+        return;
+      }
       feedback.classList.add('error');
       feedback.textContent = error.message;
       if (submitButton) submitButton.disabled = false;

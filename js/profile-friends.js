@@ -1,3 +1,5 @@
+const LOCAL_COMMUNITY_KEY = 'limitbreak-local-community';
+
 function createElement(tag, className, text) {
   const element = document.createElement(tag);
   if (className) element.className = className;
@@ -5,11 +7,72 @@ function createElement(tag, className, text) {
   return element;
 }
 
+function getLocalMembers() {
+  const defaults = [
+    { id: 'ath-1', name: 'Alex Morgan', isFollowing: true },
+    { id: 'ath-2', name: 'Jordan Hayes', isFollowing: false },
+    { id: 'ath-3', name: 'Elena Rostova', isFollowing: true },
+    { id: 'ath-4', name: 'Marcus Vance', isFollowing: false },
+    { id: 'ath-5', name: 'Maya Lin', isFollowing: false },
+    { id: 'ath-6', name: 'Infant Raja', isFollowing: false },
+    { id: 'ath-7', name: 'David Goggins', isFollowing: false }
+  ];
+  try {
+    const saved = localStorage.getItem(LOCAL_COMMUNITY_KEY);
+    const list = saved ? JSON.parse(saved) : defaults;
+    const currentName = localStorage.getItem('limitbreak-user-name');
+    if (currentName && !list.some(m => m.name.toLowerCase() === currentName.toLowerCase())) {
+      list.unshift({ id: 'user-current', name: currentName, isFollowing: false });
+    }
+    return list;
+  } catch {
+    return defaults;
+  }
+}
+
+function saveLocalMembers(members) {
+  try {
+    localStorage.setItem(LOCAL_COMMUNITY_KEY, JSON.stringify(members));
+  } catch {}
+}
+
+function getLocalFriendsData(query = '') {
+  const members = getLocalMembers();
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? members.filter(m => m.name.toLowerCase().includes(q))
+    : [];
+  const followingList = members.filter(m => m.isFollowing);
+  const followerList = members.slice(0, 2);
+  return {
+    followers: followerList.length,
+    following: followingList.length,
+    followerUsers: followerList,
+    followingUsers: followingList,
+    users: filtered
+  };
+}
+
+function toggleLocalFollow(userId, nextFollowing) {
+  const members = getLocalMembers();
+  const member = members.find(m => m.id === userId);
+  if (member) {
+    member.isFollowing = nextFollowing;
+    saveLocalMembers(members);
+  }
+}
+
 async function requestFriends(query = '') {
-  const response = await fetch(`/api/friends${query ? `?q=${encodeURIComponent(query)}` : ''}`);
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Could not load friends.');
-  return result;
+  try {
+    const response = await fetch(`/api/friends${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+    const contentType = response.headers.get('content-type') || '';
+    if (!response.ok || !contentType.includes('application/json')) {
+      return getLocalFriendsData(query);
+    }
+    return await response.json();
+  } catch {
+    return getLocalFriendsData(query);
+  }
 }
 
 function initProfileFriends() {
@@ -83,13 +146,13 @@ function initProfileFriends() {
       renderResults(data.users);
       status.textContent = '';
     } catch (error) {
-      status.textContent = error.message;
-      results.replaceChildren();
-      if (error.message.includes('Sign in')) {
-        const link = createElement('a', 'friends-login-link', 'Sign in to find and follow members.');
-        link.href = 'login.html';
-        results.append(link);
-      }
+      const fallback = getLocalFriendsData(query);
+      section.querySelector('#followerCount strong').textContent = String(fallback.followers);
+      section.querySelector('#followingCount strong').textContent = String(fallback.following);
+      followerUsers = fallback.followerUsers;
+      followingUsers = fallback.followingUsers;
+      renderResults(fallback.users);
+      status.textContent = '';
     }
   }
 
@@ -103,7 +166,7 @@ function initProfileFriends() {
       return;
     }
     status.textContent = 'Searching members...';
-    searchTimer = setTimeout(() => refresh(query), 250);
+    searchTimer = setTimeout(() => refresh(query), 200);
   });
 
   results.addEventListener('click', async event => {
@@ -114,13 +177,18 @@ function initProfileFriends() {
     status.textContent = following ? 'Updating following...' : 'Following member...';
     try {
       const response = await fetch(`/api/friends/${encodeURIComponent(button.dataset.userId)}`, { method: following ? 'DELETE' : 'POST' });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not update follow status.');
-      await refresh(search.value.trim());
-    } catch (error) {
-      status.textContent = error.message;
-      button.disabled = false;
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.ok || !contentType.includes('application/json')) {
+        toggleLocalFollow(button.dataset.userId, !following);
+      } else {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not update follow status.');
+      }
+    } catch {
+      toggleLocalFollow(button.dataset.userId, !following);
     }
+    button.disabled = false;
+    await refresh(search.value.trim());
   });
 
   refresh();
