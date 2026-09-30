@@ -1,0 +1,1 @@
+Exercise artwork is represented by resilient CSS placeholder art in the exercise cards. Replace this folder with licensed exercise images later without changing the data contract in data/exercises.js.
