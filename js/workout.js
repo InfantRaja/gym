@@ -62,7 +62,23 @@ function startTemplate(templateId) {
   timerRunning = false;
   clearInterval(timerInterval);
   showLibrary = false;
-  saveState({ activeWorkout: session });
+
+  let inferredSplit = null;
+  if (['Push', 'Pull', 'Legs'].includes(template.category) || ['Push Day', 'Pull Day', 'Leg Day'].includes(template.name)) {
+    inferredSplit = 'Push / Pull / Legs';
+  } else if (['Upper Body', 'Lower Body'].includes(template.category) || template.name.includes('Upper') || template.name.includes('Lower')) {
+    inferredSplit = 'Upper / Lower';
+  } else if (template.category === 'Full Body' || template.name.includes('Full Body')) {
+    inferredSplit = 'Full Body';
+  }
+
+  const curState = getState();
+  const patch = { activeWorkout: session };
+  if (inferredSplit && !curState.selectedSplit) {
+    patch.selectedSplit = inferredSplit;
+    patch.userChoseSplit = true;
+  }
+  saveState(patch);
   render();
 }
 

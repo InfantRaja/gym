@@ -49,6 +49,13 @@ shell.innerHTML = `
             ${['Beginner', 'Intermediate', 'Advanced'].map(item => `<option ${item === profile.experience ? 'selected' : ''}>${item}</option>`).join('')}
           </select>
         </div>
+        <div class="field">
+          <label for="split">Training split</label>
+          <select id="split">
+            <option value="">No split selected</option>
+            ${['Push / Pull / Legs', 'Upper / Lower', 'Full Body', 'Arnold Split'].map(item => `<option ${item === (state.selectedSplit || profile.split) ? 'selected' : ''}>${item}</option>`).join('')}
+          </select>
+        </div>
         <div class="field full">
           <label>Fitness goal</label>
           <div class="goal-options">
@@ -116,6 +123,7 @@ shell.innerHTML = `
 document.getElementById('profileForm').addEventListener('submit', event => {
   event.preventDefault();
   const curWeight = Number(document.getElementById('weight').value) || '';
+  const chosenSplit = document.getElementById('split').value || null;
   const next = {
     name: document.getElementById('name').value.trim() || profile.name,
     age: Number(document.getElementById('age').value) || '',
@@ -125,13 +133,14 @@ document.getElementById('profileForm').addEventListener('submit', event => {
     targetWeight: Number(document.getElementById('targetWeight').value) || '',
     goal: document.querySelector('input[name="goal"]:checked')?.value || profile.goal,
     experience: document.getElementById('experience').value,
+    split: chosenSplit || '',
     trainingDays: Number(document.getElementById('trainingDays').value) || 3
   };
   const weights = state.weights && state.weights.length ? [...state.weights] : [];
   if (curWeight && (!weights.length || weights[weights.length - 1] !== curWeight)) {
     weights.push(curWeight);
   }
-  saveState({ profile: next, weights });
+  saveState({ profile: next, selectedSplit: chosenSplit, userChoseSplit: Boolean(chosenSplit), weights });
   toast('Profile updated');
 });
 

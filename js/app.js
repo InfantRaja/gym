@@ -3,7 +3,8 @@ import { exercises, splits } from '../data/exercises.js';
 const STORAGE_KEY = 'limitbreak-state';
 const today = new Date().toISOString().slice(0, 10);
 const demoDefaults = {
-  profile: { name: 'Alex Morgan', age: 28, height: 178, weight: 82, startingWeight: 88, targetWeight: 78, goal: 'Strength', experience: 'Intermediate', trainingDays: 4 },
+  profile: { name: 'Alex Morgan', age: 28, height: 178, weight: 82, startingWeight: 88, targetWeight: 78, goal: 'Strength', experience: 'Intermediate', trainingDays: 4, split: 'Push / Pull / Legs' },
+  selectedSplit: 'Push / Pull / Legs',
   nutrition: { calories: 2200, protein: 72, carbs: 210, fat: 68, water: 2.5, targets: { calories: 2800, protein: 120, carbs: 300, fat: 80, water: 3 } },
   steps: 6842,
   streak: 12,
@@ -18,7 +19,8 @@ const demoDefaults = {
 };
 
 const freshDefaults = {
-  profile: { name: '', age: '', height: '', weight: '', startingWeight: '', targetWeight: '', goal: 'Strength', experience: 'Beginner', trainingDays: 3 },
+  profile: { name: '', age: '', height: '', weight: '', startingWeight: '', targetWeight: '', goal: 'Strength', experience: 'Beginner', trainingDays: 3, split: '' },
+  selectedSplit: null,
   nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, water: 0, targets: { calories: 2400, protein: 120, carbs: 250, fat: 70, water: 2.5 } },
   steps: 0,
   streak: 0,
@@ -44,12 +46,13 @@ export function getState() {
     const stored = JSON.parse(raw || '{}');
 
     // Clean up seed data if a new user previously inherited Alex Morgan's seed values
-    if (!isDemo && stored.workouts?.some(w => String(w.id).startsWith('seed-'))) {
+    if (!isDemo && (stored.workouts?.some(w => String(w.id).startsWith('seed-')) || (!stored.workouts?.length && !stored.userChoseSplit))) {
       stored.workouts = [];
       stored.prs = [];
       stored.weights = [];
       stored.streak = 0;
       stored.steps = 0;
+      stored.selectedSplit = stored.userChoseSplit ? stored.selectedSplit : null;
       if (stored.nutrition) {
         stored.nutrition.calories = 0;
         stored.nutrition.protein = 0;
