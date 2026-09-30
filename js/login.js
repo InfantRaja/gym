@@ -1,101 +1,103 @@
-import { openGoogleAuthModal } from './google-auth.js';
+(function () {
+  const SESSION_KEY = 'limitbreak-auth';
+  const form = document.getElementById('loginForm');
+  const message = document.getElementById('loginMessage');
+  const password = document.getElementById('password');
+  const passwordToggle = document.getElementById('passwordToggle');
+  const googleSignInBtn = document.getElementById('googleSignInBtn');
 
-const SESSION_KEY = 'limitbreak-auth';
-const form = document.getElementById('loginForm');
-const message = document.getElementById('loginMessage');
-const password = document.getElementById('password');
-const passwordToggle = document.getElementById('passwordToggle');
-const googleSignInBtn = document.getElementById('googleSignInBtn');
-
-if (localStorage.getItem('limitbreak-user-id')) {
-  try {
-    if (JSON.parse(localStorage.getItem(SESSION_KEY) || '{}').email) {
-      window.location.replace('home.html');
+  if (localStorage.getItem('limitbreak-user-id')) {
+    try {
+      if (JSON.parse(localStorage.getItem(SESSION_KEY) || '{}').email) {
+        window.location.replace('home.html');
+      }
+    } catch {
+      localStorage.removeItem(SESSION_KEY);
     }
-  } catch {
-    localStorage.removeItem(SESSION_KEY);
   }
-}
 
-passwordToggle.addEventListener('click', () => {
-  const visible = password.type === 'text';
-  password.type = visible ? 'password' : 'text';
-  passwordToggle.textContent = visible ? 'Show' : 'Hide';
-  passwordToggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
-});
+  if (passwordToggle && password) {
+    passwordToggle.addEventListener('click', () => {
+      const visible = password.type === 'text';
+      password.type = visible ? 'password' : 'text';
+      passwordToggle.textContent = visible ? 'Show' : 'Hide';
+      passwordToggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+    });
+  }
 
-document.getElementById('forgotPassword').addEventListener('click', event => {
-  event.preventDefault();
-  message.textContent = 'Please enter your registered email and password to sign in.';
-});
+  const forgot = document.getElementById('forgotPassword');
+  if (forgot) {
+    forgot.addEventListener('click', event => {
+      event.preventDefault();
+      if (message) message.textContent = 'Please enter your registered email and password to sign in.';
+    });
+  }
 
-// Google Sign-In & Verification
-if (googleSignInBtn) {
-  googleSignInBtn.addEventListener('click', () => {
-    openGoogleAuthModal({
-      onAuthenticated: (user) => {
+  if (googleSignInBtn) {
+    googleSignInBtn.addEventListener('click', () => {
+      if (typeof window.handleGoogleSignIn === 'function') {
+        window.handleGoogleSignIn();
+      }
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const passwordValue = password ? password.value : '';
+      if (message) message.textContent = '';
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: passwordValue })
+        });
+        if (response.status === 404 || response.status === 503) {
+          if (!signInOffline(email, passwordValue)) return;
+        } else {
+          const result = await response.json();
+          if (!response.ok) {
+            if (message) message.textContent = result.error || 'Could not sign in. Please try again.';
+            return;
+          }
+          localStorage.setItem('limitbreak-user-id', result.user.id);
+          localStorage.setItem('limitbreak-user-name', result.user.name);
+          localStorage.setItem(SESSION_KEY, JSON.stringify({ email: result.user.email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember')?.checked }));
+        }
+      } catch {
+        if (!signInOffline(email, passwordValue)) {
+          if (message) message.textContent = 'Could not reach the server. No offline profile for this email is saved on this device.';
+          return;
+        }
+      }
+      if (message) {
         message.className = 'login-message success-message';
-        message.textContent = `Welcome ${user.name || 'Athlete'}! Google account verified. Loading dashboard...`;
-        setTimeout(() => {
-          window.location.href = 'home.html';
-        }, 400);
+        message.textContent = 'Signed in. Loading your dashboard...';
       }
+      setTimeout(() => { window.location.href = 'home.html'; }, 450);
     });
-  });
-}
+  }
 
-form.addEventListener('submit', async event => {
-  event.preventDefault();
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const passwordValue = password.value;
-  message.textContent = '';
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: passwordValue })
-    });
-    if (response.status === 404 || response.status === 503) {
-      if (!signInOffline(email, passwordValue)) return;
-    } else {
-      const result = await response.json();
-      if (!response.ok) {
-        message.textContent = result.error || 'Could not sign in. Please try again.';
-        return;
-      }
-      localStorage.setItem('limitbreak-user-id', result.user.id);
-      localStorage.setItem('limitbreak-user-name', result.user.name);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ email: result.user.email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
+  function signInOffline(email, passwordValue) {
+    if (email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') {
+      setLocalDemoSession(email);
+      return true;
     }
-  } catch {
-    if (!signInOffline(email, passwordValue)) {
-      message.textContent = 'Could not reach the server. No offline profile for this email is saved on this device.';
-      return;
+
+    const savedAuth = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    if (savedAuth.email?.toLowerCase() === email && localStorage.getItem('limitbreak-user-id')) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ ...savedAuth, signedInAt: new Date().toISOString(), remember: document.getElementById('remember')?.checked }));
+      return true;
     }
-  }
-  message.className = 'login-message success-message';
-  message.textContent = 'Signed in. Loading your dashboard...';
-  setTimeout(() => { window.location.href = 'home.html'; }, 450);
-});
 
-function signInOffline(email, passwordValue) {
-  if (email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') {
-    setLocalDemoSession(email);
-    return true;
+    if (message) message.textContent = 'Offline mode active. Create a profile on this device first.';
+    return false;
   }
 
-  const savedAuth = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-  if (savedAuth.email?.toLowerCase() === email && localStorage.getItem('limitbreak-user-id')) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...savedAuth, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
-    return true;
+  function setLocalDemoSession(email) {
+    localStorage.setItem('limitbreak-user-id', 'demo');
+    localStorage.setItem('limitbreak-user-name', 'Alex Morgan');
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember')?.checked }));
   }
-
-  message.textContent = 'Offline mode active. Create a profile on this device first.';
-  return false;
-}
-
-function setLocalDemoSession(email) {
-  localStorage.setItem('limitbreak-user-id', 'demo');
-  localStorage.setItem('limitbreak-user-name', 'Alex Morgan');
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
-}
+})();
