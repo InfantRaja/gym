@@ -1,4 +1,15 @@
 import { exercises, splits } from '../data/exercises.js';
+import { getUser, logout } from 'https://esm.sh/@netlify/identity@2.0.0';
+
+const authenticatedUser = await getUser();
+if (!authenticatedUser) {
+  localStorage.removeItem('limitbreak-user-id');
+  localStorage.removeItem('limitbreak-user-name');
+  window.location.replace('login.html');
+  await new Promise(() => {});
+}
+localStorage.setItem('limitbreak-user-id', authenticatedUser.id);
+localStorage.setItem('limitbreak-user-name', authenticatedUser.name || authenticatedUser.userMetadata?.full_name || authenticatedUser.email.split('@')[0]);
 
 const STORAGE_KEY = 'limitbreak-state';
 const today = new Date().toISOString().slice(0, 10);
@@ -79,7 +90,7 @@ export function renderShell(activePage) {
   });
   document.querySelectorAll('#logoutButton,#mobileLogoutButton').forEach(button => button.addEventListener('click', async () => {
     button.disabled = true;
-    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    try { await logout(); } catch {}
     localStorage.removeItem('limitbreak-auth');
     localStorage.removeItem('limitbreak-user-id');
     localStorage.removeItem('limitbreak-user-name');

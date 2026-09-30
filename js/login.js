@@ -1,18 +1,11 @@
-const SESSION_KEY = 'limitbreak-auth';
+import { AuthError, getUser, handleAuthCallback, login, requestPasswordRecovery, updateUser } from 'https://esm.sh/@netlify/identity@2.0.0';
+
 const form = document.getElementById('loginForm');
 const message = document.getElementById('loginMessage');
+const emailInput = document.getElementById('email');
 const password = document.getElementById('password');
 const passwordToggle = document.getElementById('passwordToggle');
-
-if (localStorage.getItem('limitbreak-user-id')) {
-  try {
-    if (JSON.parse(localStorage.getItem(SESSION_KEY) || '{}').email) {
-      window.location.replace('home.html');
-    }
-  } catch {
-    localStorage.removeItem(SESSION_KEY);
-  }
-}
+const submitButton = form.querySelector('[type="submit"]');
 
 passwordToggle.addEventListener('click', () => {
   const visible = password.type === 'text';
@@ -21,73 +14,117 @@ passwordToggle.addEventListener('click', () => {
   passwordToggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
 });
 
-document.getElementById('forgotPassword').addEventListener('click', event => {
+document.getElementById('forgotPassword').addEventListener('click', async event => {
   event.preventDefault();
-  message.textContent = 'Demo access is shown below the form.';
+  const email = emailInput.value.trim();
+  if (!email || !emailInput.checkValidity()) {
+    showMessage('Enter your email address first.');
+    emailInput.focus();
+    return;
+  }
+  setBusy(true, 'Sending…');
+  try {
+    await requestPasswordRecovery(email);
+    showMessage('Check your email for a password reset link.', true);
+  } catch (error) {
+    showAuthError(error, 'Could not send the password reset email.');
+  } finally {
+    setBusy(false);
+  }
 });
-
-const demoNote = document.querySelector('.demo-note');
-if (demoNote) {
-  demoNote.style.cursor = 'pointer';
-  demoNote.title = 'Click to fill demo credentials';
-  demoNote.addEventListener('click', () => {
-    document.getElementById('email').value = 'demo@limitbreak.app';
-    password.value = 'limitbreak';
-  });
-}
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const passwordValue = password.value;
-  message.textContent = '';
+  showMessage('');
+  setBusy(true, 'Signing in…');
   try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: passwordValue })
-    });
-    if (response.status === 404 || response.status === 503) {
-      if (!signInOffline(email, passwordValue)) return;
-    } else {
-      const result = await response.json();
-      if (!response.ok) {
-        message.textContent = result.error || 'Could not sign in. Please try again.';
-        return;
-      }
-      localStorage.setItem('limitbreak-user-id', result.user.id);
-      localStorage.setItem('limitbreak-user-name', result.user.name);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ email: result.user.email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
-    }
-  } catch {
-    if (!signInOffline(email, passwordValue)) {
-      message.textContent = 'Could not reach the server. No offline profile for this email is saved on this device.';
-      return;
-    }
+    const user = await login(emailInput.value.trim(), password.value);
+    saveUser(user);
+    showMessage('Signed in. Loading your dashboard…', true);
+    window.location.replace('home.html');
+  } catch (error) {
+    showAuthError(error, 'Could not sign in. Please try again.');
+  } finally {
+    setBusy(false);
   }
-  message.className = 'login-message success-message';
-  message.textContent = 'Signed in. Loading your dashboard...';
-  setTimeout(() => { window.location.href = 'home.html'; }, 450);
 });
 
-function signInOffline(email, passwordValue) {
-  if (email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') {
-    setLocalDemoSession(email);
-    return true;
+async function initialize() {
+  try {
+    const result = await handleAuthCallback();
+    if (result?.type === 'recovery') {
+      preparePasswordReset();
+      return;
+    }
+    if (result?.user) {
+      saveUser(result.user);
+      showMessage(result.type === 'confirmation' ? 'Email confirmed. Opening your dashboard…' : 'Signed in. Opening your dashboard…', true);
+      window.location.replace('home.html');
+      return;
+    }
+  } catch (error) {
+    showAuthError(error, 'The sign-in link could not be processed.');
+    return;
   }
-
-  const savedAuth = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-  if (savedAuth.email?.toLowerCase() === email && localStorage.getItem('limitbreak-user-id')) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...savedAuth, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
-    return true;
+  const user = await getUser();
+  if (user) {
+    saveUser(user);
+    window.location.replace('home.html');
   }
-
-  message.textContent = 'Offline mode active. Create a profile on this device first.';
-  return false;
 }
 
-function setLocalDemoSession(email) {
-  localStorage.setItem('limitbreak-user-id', 'demo');
-  localStorage.setItem('limitbreak-user-name', 'Alex Morgan');
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
+function preparePasswordReset() {
+  document.querySelector('.eyebrow').textContent = 'Password recovery';
+  document.querySelector('.login-card h2').textContent = 'Choose a new password.';
+  document.querySelector('.login-subtitle').textContent = 'Use at least 8 characters for your new password.';
+  emailInput.closest('.field').hidden = true;
+  document.querySelector('.password-label label').textContent = 'New password';
+  document.getElementById('forgotPassword').hidden = true;
+  password.autocomplete = 'new-password';
+  password.minLength = 8;
+  submitButton.innerHTML = 'Update password <span>→</span>';
+  document.querySelector('.remember').hidden = true;
+  document.querySelector('.signup-copy').hidden = true;
+  form.addEventListener('submit', async event => {
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    setBusy(true, 'Updating…');
+    try {
+      const user = await updateUser({ password: password.value });
+      saveUser(user);
+      showMessage('Password updated. Opening your dashboard…', true);
+      window.location.replace('home.html');
+    } catch (error) {
+      showAuthError(error, 'Could not update your password.');
+    } finally {
+      setBusy(false);
+    }
+  }, true);
 }
+
+function saveUser(user) {
+  localStorage.setItem('limitbreak-user-id', user.id);
+  localStorage.setItem('limitbreak-user-name', user.name || user.userMetadata?.full_name || user.email.split('@')[0]);
+}
+
+function showAuthError(error, fallback) {
+  if (error instanceof AuthError) {
+    if (error.status === 401) return showMessage('Invalid email or password.');
+    if (error.status === 422) return showMessage('Check the information you entered and try again.');
+    return showMessage(error.message || fallback);
+  }
+  showMessage(fallback);
+}
+
+function showMessage(text, success = false) {
+  message.className = `login-message${success ? ' success-message' : ''}`;
+  message.textContent = text;
+}
+
+function setBusy(busy, label = 'Sign in') {
+  submitButton.disabled = busy;
+  if (busy) submitButton.textContent = label;
+  else if (!document.querySelector('.eyebrow').textContent.includes('recovery')) submitButton.innerHTML = 'Sign in <span>→</span>';
+}
+
+initialize();
