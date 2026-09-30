@@ -63,6 +63,10 @@ export function getExercise(name) { return exercises.find(exercise => exercise.n
 export { exercises, splits };
 
 export function renderShell(activePage) {
+  if (!localStorage.getItem('limitbreak-auth') && !localStorage.getItem('limitbreak-user-id')) {
+    location.replace('login.html');
+    return document.createElement('main');
+  }
   syncMongoState();
   const nav = [{ id: 'feed', label: 'Home', icon: '⌂', href: 'home.html' }, { id: 'dashboard', label: 'Dashboard', icon: '◈', href: 'index.html' }, { id: 'workout', label: 'Workout', icon: '◒', href: 'workout.html' }, { id: 'exercises', label: 'Exercises', icon: '✦', href: 'exercises.html' }, { id: 'progress', label: 'Progress', icon: '↗', href: 'progress.html' }, { id: 'profile', label: 'Profile', icon: '◎', href: 'profile.html' }];
   const state = getState();

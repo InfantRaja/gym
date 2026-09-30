@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/register.css">
   <link rel="stylesheet" href="css/profile-names.css">
+  <script>
+    if (localStorage.getItem('limitbreak-auth') || localStorage.getItem('limitbreak-user-id')) {
+      location.replace('home.html');
+    }
+  </script>
 </head>
 <body class="login-page">
   <main class="login-layout">

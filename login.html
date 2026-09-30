@@ -6,6 +6,11 @@
   <title>LimitBreak / Sign in</title>
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/login.css">
+  <script>
+    if (localStorage.getItem('limitbreak-auth') || localStorage.getItem('limitbreak-user-id')) {
+      location.replace('home.html');
+    }
+  </script>
 </head>
 <body class="login-page">
   <main class="login-layout">
