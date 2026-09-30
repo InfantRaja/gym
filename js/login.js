@@ -4,6 +4,16 @@ const message = document.getElementById('loginMessage');
 const password = document.getElementById('password');
 const passwordToggle = document.getElementById('passwordToggle');
 
+if (localStorage.getItem('limitbreak-user-id')) {
+  try {
+    if (JSON.parse(localStorage.getItem(SESSION_KEY) || '{}').email) {
+      window.location.replace('home.html');
+    }
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+
 passwordToggle.addEventListener('click', () => {
   const visible = password.type === 'text';
   password.type = visible ? 'password' : 'text';
@@ -37,33 +47,21 @@ form.addEventListener('submit', async event => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: passwordValue })
     });
-    const result = await response.json();
-    if (!response.ok) {
-      if (response.status === 503) {
-        if ((email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') || !email) {
-          setLocalDemoSession('demo@limitbreak.app');
-        } else {
-          const savedAuth = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-          if (savedAuth.email && savedAuth.email.toLowerCase() === email) {
-            setLocalDemoSession(email);
-          } else {
-            message.textContent = 'Offline mode active. Click "Demo access" below to sign in.';
-            return;
-          }
-        }
-      } else {
+    if (response.status === 404 || response.status === 503) {
+      if (!signInOffline(email, passwordValue)) return;
+    } else {
+      const result = await response.json();
+      if (!response.ok) {
         message.textContent = result.error || 'Could not sign in. Please try again.';
         return;
       }
-    } else {
       localStorage.setItem('limitbreak-user-id', result.user.id);
       localStorage.setItem('limitbreak-user-name', result.user.name);
       localStorage.setItem(SESSION_KEY, JSON.stringify({ email: result.user.email, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
     }
   } catch {
-    if (email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') setLocalDemoSession(email);
-    else {
-      message.textContent = 'Could not reach the server. Check that LimitBreak is running.';
+    if (!signInOffline(email, passwordValue)) {
+      message.textContent = 'Could not reach the server. No offline profile for this email is saved on this device.';
       return;
     }
   }
@@ -71,6 +69,22 @@ form.addEventListener('submit', async event => {
   message.textContent = 'Signed in. Loading your dashboard...';
   setTimeout(() => { window.location.href = 'home.html'; }, 450);
 });
+
+function signInOffline(email, passwordValue) {
+  if (email === 'demo@limitbreak.app' && passwordValue === 'limitbreak') {
+    setLocalDemoSession(email);
+    return true;
+  }
+
+  const savedAuth = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+  if (savedAuth.email?.toLowerCase() === email && localStorage.getItem('limitbreak-user-id')) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...savedAuth, signedInAt: new Date().toISOString(), remember: document.getElementById('remember').checked }));
+    return true;
+  }
+
+  message.textContent = 'Offline mode active. Create a profile on this device first.';
+  return false;
+}
 
 function setLocalDemoSession(email) {
   localStorage.setItem('limitbreak-user-id', 'demo');

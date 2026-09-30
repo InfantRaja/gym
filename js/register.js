@@ -32,20 +32,12 @@ form.addEventListener('submit', async event => {
         password: password.value
       })
     });
+    if (response.status === 404 || response.status === 503) {
+      createLocalProfile();
+      return;
+    }
     const result = await response.json();
     if (!response.ok) {
-      if (response.status === 503) {
-        const name = document.getElementById('name').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const localId = 'local-' + Date.now();
-        localStorage.setItem('limitbreak-user-id', localId);
-        localStorage.setItem('limitbreak-user-name', name);
-        localStorage.setItem('limitbreak-auth', JSON.stringify({ email, signedInAt: new Date().toISOString() }));
-        message.className = 'login-message success-message';
-        message.textContent = 'Offline profile created! Opening your dashboard...';
-        setTimeout(() => { window.location.href = 'home.html'; }, 500);
-        return;
-      }
       message.textContent = result.error || 'Could not create the account.';
       return;
     }
@@ -57,6 +49,17 @@ form.addEventListener('submit', async event => {
     message.textContent = 'Account created. Opening your dashboard...';
     setTimeout(() => { window.location.href = 'home.html'; }, 500);
   } catch {
-    message.textContent = 'Could not reach the server. Check that LimitBreak is running.';
+    createLocalProfile();
   }
 });
+
+function createLocalProfile() {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  localStorage.setItem('limitbreak-user-id', 'local-' + Date.now());
+  localStorage.setItem('limitbreak-user-name', name);
+  localStorage.setItem('limitbreak-auth', JSON.stringify({ email, signedInAt: new Date().toISOString() }));
+  message.className = 'login-message success-message';
+  message.textContent = 'Offline profile created on this device. Opening your dashboard...';
+  setTimeout(() => { window.location.href = 'home.html'; }, 500);
+}
