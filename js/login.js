@@ -1,8 +1,11 @@
+import { openGoogleAuthModal } from './google-auth.js';
+
 const SESSION_KEY = 'limitbreak-auth';
 const form = document.getElementById('loginForm');
 const message = document.getElementById('loginMessage');
 const password = document.getElementById('password');
 const passwordToggle = document.getElementById('passwordToggle');
+const googleSignInBtn = document.getElementById('googleSignInBtn');
 
 if (localStorage.getItem('limitbreak-user-id')) {
   try {
@@ -25,6 +28,21 @@ document.getElementById('forgotPassword').addEventListener('click', event => {
   event.preventDefault();
   message.textContent = 'Please enter your registered email and password to sign in.';
 });
+
+// Google Sign-In & Verification
+if (googleSignInBtn) {
+  googleSignInBtn.addEventListener('click', () => {
+    openGoogleAuthModal({
+      onAuthenticated: (user) => {
+        message.className = 'login-message success-message';
+        message.textContent = `Welcome ${user.name || 'Athlete'}! Google account verified. Loading dashboard...`;
+        setTimeout(() => {
+          window.location.href = 'home.html';
+        }, 400);
+      }
+    });
+  });
+}
 
 form.addEventListener('submit', async event => {
   event.preventDefault();

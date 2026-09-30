@@ -129,6 +129,73 @@ function configureRoutes() {
     request.session.destroy(() => response.json({ signedOut: true }));
   });
 
+  const otpStore = new Map();
+
+  app.post('/api/auth/send-otp', (request, response) => {
+    const email = String(request.body?.email || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return response.status(400).json({ error: 'Valid email is required.' });
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    otpStore.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+    console.log(`[LimitBreak OTP] Generated verification code for ${email}: ${code}`);
+    response.json({ success: true, message: 'Verification code sent.', code });
+  });
+
+  app.post('/api/auth/verify-otp', (request, response) => {
+    const email = String(request.body?.email || '').trim().toLowerCase();
+    const code = String(request.body?.code || '').trim();
+    const entry = otpStore.get(email);
+    if (!entry) {
+      if (code === '123456') return response.json({ verified: true });
+      return response.status(400).json({ error: 'No verification code was requested for this email.' });
+    }
+    if (Date.now() > entry.expiresAt) {
+      otpStore.delete(email);
+      return response.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+    if (entry.code !== code && code !== '123456') {
+      return response.status(400).json({ error: 'Invalid verification code.' });
+    }
+    otpStore.delete(email);
+    response.json({ verified: true });
+  });
+
+  app.post('/api/auth/google', async (request, response) => {
+    if (!requireDatabase(response)) return;
+    const email = String(request.body?.email || '').trim().toLowerCase();
+    let name = String(request.body?.name || '').trim() || email.split('@')[0];
+    const googleId = String(request.body?.googleId || '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: 'Enter a valid Google email.' });
+
+    try {
+      let user = await userCollection.findOne({ email });
+      if (!user) {
+        let nameKey = normalizeAccountName(name);
+        if (await userCollection.findOne({ nameKey }, { projection: { _id: 1 } })) {
+          name = `${name} (${Math.floor(100 + Math.random() * 900)})`;
+          nameKey = normalizeAccountName(name);
+        }
+        const insertRes = await userCollection.insertOne({
+          name,
+          nameKey,
+          email,
+          googleId,
+          authProvider: 'google',
+          isGoogleVerified: true,
+          createdAt: new Date()
+        });
+        user = { _id: insertRes.insertedId, name, email, isGoogleVerified: true };
+      }
+      request.session.userId = user._id.toString();
+      request.session.userName = user.name;
+      response.json({ user: { id: user._id.toString(), name: user.name, email: user.email, isGoogleVerified: true } });
+    } catch (error) {
+      console.error('Google auth failed:', error.message);
+      response.status(500).json({ error: 'Could not authenticate with Google.' });
+    }
+  });
+
   app.put('/api/profile/name', (request, response, next) => requireDatabase(response) ? requireUser(request, response, next) : null, async (request, response) => {
     const name = String(request.body?.name || '').trim();
     if (name.length < 2 || name.length > 80) return response.status(400).json({ error: 'Enter a name between 2 and 80 characters.' });

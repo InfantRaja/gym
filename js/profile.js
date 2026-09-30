@@ -6,13 +6,20 @@ import './profile-unique-name.js';
 const shell = renderShell('profile');
 let state = getState();
 const profile = state.profile;
+const authData = JSON.parse(localStorage.getItem('limitbreak-auth') || '{}');
+const googleUser = JSON.parse(localStorage.getItem('limitbreak-google-user') || '{}');
+const isGoogleVerified = Boolean(authData.isGoogleVerified || authData.provider === 'google' || googleUser.verified || profile.isGoogleVerified);
+const isEmailVerified = Boolean(isGoogleVerified || authData.emailVerified || profile.emailVerified);
 
 shell.innerHTML = `
   ${setPageTitle('Your profile', 'LimitBreak / Personal settings')}
   <section class="card profile-hero">
     <div class="profile-avatar">${initials(profile.name || 'Athlete')}</div>
     <div>
-      <h2>${escapeHtml(profile.name || 'Athlete')}</h2>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2>${escapeHtml(profile.name || 'Athlete')}</h2>
+        ${isGoogleVerified ? `<span class="google-badge-verified">✓ Google Verified</span>` : (isEmailVerified ? `<span class="verified-pill">✓ Email Verified</span>` : '')}
+      </div>
       <p>${profile.goal} · ${profile.experience} · ${profile.trainingDays || 3} training days / week</p>
     </div>
   </section>
@@ -110,6 +117,12 @@ shell.innerHTML = `
         <div class="setting">
           <span>Personal record alerts</span>
           <button class="toggle on" aria-label="Toggle personal record alerts"></button>
+        </div>
+        <div class="setting">
+          <span>Account verification</span>
+          <strong class="accent" style="color:var(--lime);display:flex;align-items:center;gap:6px">
+            ${isGoogleVerified ? '✓ Google Verified' : (isEmailVerified ? '✓ Email Verified' : 'Standard')}
+          </strong>
         </div>
         <div class="setting">
           <span>Unit system</span>

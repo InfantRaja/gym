@@ -1,0 +1,358 @@
+/* Google Authentication & Verification Styles for LimitBreak */
+
+/* Google Sign-in Button */
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #171b19;
+  border: 1px solid var(--line);
+  color: #f4f6f1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 6px;
+}
+
+.btn-google:hover {
+  background: #1e2421;
+  border-color: #4285f4;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.18);
+}
+
+.btn-google:active {
+  transform: translateY(0);
+}
+
+.btn-google .google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Auth Divider */
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 18px 0;
+  color: var(--muted);
+  font: 500 0.68rem 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.login-divider span {
+  padding: 0 14px;
+}
+
+/* Modal Overlay & Card */
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 13, 11, 0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: authFadeIn 0.2s ease;
+}
+
+.auth-modal {
+  background: linear-gradient(150deg, #191f1b, #121513);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 32px 28px;
+  width: min(100%, 440px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  animation: authScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes authScaleUp {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.auth-modal-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-modal-icon-wrap {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: #1e2421;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.auth-modal-header h3 {
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.auth-modal-header p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.auth-modal-header p strong {
+  color: var(--text);
+  word-break: break-all;
+}
+
+/* Code Banner / Toast inside modal */
+.otp-code-banner {
+  background: rgba(200, 241, 105, 0.08);
+  border: 1px solid rgba(200, 241, 105, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: #d8e5d3;
+}
+
+.otp-code-banner .code-badge {
+  font-family: 'DM Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--lime);
+  letter-spacing: 0.15em;
+  background: #141815;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(200, 241, 105, 0.4);
+}
+
+/* 6-Digit OTP inputs */
+.otp-digit-inputs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 22px 0;
+}
+
+.otp-digit-input {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  background: #0d100e;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  color: var(--lime);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.otp-digit-input:focus {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px rgba(200, 241, 105, 0.18);
+  background: #141a15;
+}
+
+.otp-digit-input.filled {
+  border-color: #4a5c4d;
+}
+
+/* OTP modal footer & resend */
+.otp-modal-footer {
+  display: grid;
+  gap: 12px;
+}
+
+.otp-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.otp-resend-btn {
+  background: transparent;
+  color: var(--lime);
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.otp-resend-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+.auth-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.auth-modal-actions .btn {
+  flex: 1;
+}
+
+/* Google Account Selector in Modal */
+.google-account-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.google-account-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #181d1a;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.google-account-item:hover {
+  background: #1f2722;
+  border-color: #4285f4;
+}
+
+.google-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4285f4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.google-account-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.google-account-info strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.google-account-info small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.google-badge-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(66, 133, 244, 0.15);
+  color: #6ba5ff;
+  border: 1px solid rgba(66, 133, 244, 0.3);
+  padding: 2px 7px;
+  border-radius: 100px;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(200, 241, 105, 0.12);
+  color: var(--lime);
+  border: 1px solid rgba(200, 241, 105, 0.25);
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* Close button */
+.auth-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-modal-close:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+@media (max-width: 480px) {
+  .otp-digit-inputs {
+    gap: 6px;
+  }
+  .otp-digit-input {
+    width: 40px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+  .auth-modal {
+    padding: 24px 18px;
+  }
+}
