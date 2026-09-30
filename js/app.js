@@ -2,7 +2,7 @@ import { exercises, splits } from '../data/exercises.js';
 
 const STORAGE_KEY = 'limitbreak-state';
 const today = new Date().toISOString().slice(0, 10);
-const defaults = {
+const demoDefaults = {
   profile: { name: 'Alex Morgan', age: 28, height: 178, weight: 82, startingWeight: 88, targetWeight: 78, goal: 'Strength', experience: 'Intermediate', trainingDays: 4 },
   nutrition: { calories: 2200, protein: 72, carbs: 210, fat: 68, water: 2.5, targets: { calories: 2800, protein: 120, carbs: 300, fat: 80, water: 3 } },
   steps: 6842,
@@ -17,13 +17,64 @@ const defaults = {
   activeWorkout: null
 };
 
+const freshDefaults = {
+  profile: { name: '', age: '', height: '', weight: '', startingWeight: '', targetWeight: '', goal: 'Strength', experience: 'Beginner', trainingDays: 3 },
+  nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, water: 0, targets: { calories: 2400, protein: 120, carbs: 250, fat: 70, water: 2.5 } },
+  steps: 0,
+  streak: 0,
+  workouts: [],
+  prs: [],
+  weights: [],
+  activeWorkout: null
+};
+
+export function isDemoUser() {
+  const userId = localStorage.getItem('limitbreak-user-id');
+  const auth = JSON.parse(localStorage.getItem('limitbreak-auth') || '{}');
+  return userId === 'demo' || auth.email === 'demo@limitbreak.app';
+}
+
 export function getState() {
+  const isDemo = isDemoUser();
+  const currentDefaults = isDemo ? demoDefaults : freshDefaults;
+  const currentName = localStorage.getItem('limitbreak-user-name') || (isDemo ? 'Alex Morgan' : 'Athlete');
+
   try {
-    const stored = JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
-    const profile = { ...defaults.profile, ...stored.profile };
-    if (!stored.profile?.name && localStorage.getItem('limitbreak-user-name')) profile.name = localStorage.getItem('limitbreak-user-name');
-    return { ...defaults, ...stored, profile };
-  } catch { return structuredClone(defaults); }
+    const raw = localStorage.getItem(getStorageKey());
+    const stored = JSON.parse(raw || '{}');
+
+    // Clean up seed data if a new user previously inherited Alex Morgan's seed values
+    if (!isDemo && stored.workouts?.some(w => String(w.id).startsWith('seed-'))) {
+      stored.workouts = [];
+      stored.prs = [];
+      stored.weights = [];
+      stored.streak = 0;
+      stored.steps = 0;
+      if (stored.nutrition) {
+        stored.nutrition.calories = 0;
+        stored.nutrition.protein = 0;
+        stored.nutrition.carbs = 0;
+        stored.nutrition.fat = 0;
+        stored.nutrition.water = 0;
+      }
+      if (stored.profile?.name === 'Alex Morgan' || !stored.profile?.name) {
+        stored.profile = { ...freshDefaults.profile, name: currentName };
+      }
+      localStorage.setItem(getStorageKey(), JSON.stringify(stored));
+    }
+
+    const baseProfile = { ...currentDefaults.profile, name: currentName };
+    const profile = { ...baseProfile, ...stored.profile };
+    if (!profile.name || (profile.name === 'Alex Morgan' && !isDemo)) {
+      profile.name = currentName;
+    }
+
+    return { ...currentDefaults, ...stored, profile };
+  } catch {
+    const fresh = structuredClone(currentDefaults);
+    fresh.profile.name = currentName;
+    return fresh;
+  }
 }
 function getStorageKey() { return localStorage.getItem('limitbreak-user-id') ? `${STORAGE_KEY}:${localStorage.getItem('limitbreak-user-id')}` : STORAGE_KEY; }
 export function saveState(patch) {
