@@ -111,12 +111,11 @@ async function renderFollowingFeed() {
 
   const section = document.createElement('section');
   section.className = 'following-feed-section';
-  section.innerHTML = '<div class="feed-section-heading"><div><p class="eyebrow">Your community</p><h2>Following activity</h2></div><a class="small accent" href="profile.html">Find people →</a></div><div class="following-feed-list" id="followingFeedList"><p class="muted small">Loading activity...</p></div><section class="suggested-athletes" id="suggestedAthletes"><div class="suggested-heading"><h2>Suggested athletes</h2><a href="profile.html">Find more →</a></div><div class="suggested-list" id="suggestedList"><p class="muted small">Loading members...</p></div></section>';
+  section.innerHTML = '<div class="feed-section-heading"><div><p class="eyebrow">Your community</p><h2>Following activity</h2></div><a class="small accent" href="profile.html">Find people →</a></div><div class="following-feed-list" id="followingFeedList"><p class="muted small">Loading activity...</p></div>';
   const pageHeader = shell.querySelector('.page-header');
   if (pageHeader) pageHeader.after(section);
   else shell.append(section);
   const list = section.querySelector('#followingFeedList');
-  const suggestedList = section.querySelector('#suggestedList');
 
   try {
     let result = null;
@@ -143,51 +142,8 @@ async function renderFollowingFeed() {
     } else {
       list.replaceChildren(...result.workouts.map(renderWorkout));
     }
-
-    let suggestionResult = null;
-    try {
-      const suggestionResponse = await fetch('/api/friends/suggestions');
-      const contentType = suggestionResponse.headers.get('content-type') || '';
-      if (suggestionResponse.ok && contentType.includes('application/json')) {
-        suggestionResult = await suggestionResponse.json();
-      }
-    } catch {}
-
-    if (!suggestionResult) {
-      suggestionResult = {
-        users: [
-          { id: 'ath-2', name: 'Jordan Hayes' },
-          { id: 'ath-4', name: 'Marcus Vance' },
-          { id: 'ath-5', name: 'Maya Lin' }
-        ]
-      };
-    }
-
-    if (!suggestionResult.users?.length) {
-      suggestedList.replaceChildren(makeElement('p', 'muted small', 'You are following everyone here.'));
-      return;
-    }
-    suggestedList.replaceChildren(...suggestionResult.users.map(user => {
-      const card = makeElement('article', 'suggested-athlete');
-      const initials = user.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
-      card.append(makeElement('span', 'suggested-avatar', initials));
-      card.append(makeElement('strong', '', user.name));
-      const follow = makeElement('button', 'btn btn-secondary suggested-follow', '+ Follow');
-      follow.type = 'button';
-      follow.addEventListener('click', async () => {
-        follow.disabled = true;
-        try {
-          await fetch(`/api/friends/${encodeURIComponent(user.id)}`, { method: 'POST' });
-        } catch {}
-        follow.textContent = 'Following';
-        setTimeout(() => card.remove(), 600);
-      });
-      card.append(follow);
-      return card;
-    }));
   } catch (error) {
     list.replaceChildren(makeElement('p', 'muted small', 'Community feed ready. Follow athletes to see workouts.'));
-    suggestedList.replaceChildren();
   }
 }
 

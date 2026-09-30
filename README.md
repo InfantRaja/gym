@@ -10,7 +10,7 @@ The demo account is `demo@limitbreak.app` / `limitbreak`. This starter is intend
 
 - `login.html`: sign-in screen with demo access and MongoDB-backed accounts
 - `register.html`: create a database-backed account
-- `home.html`: social workout feed and suggested athletes; served at `/`
+- `home.html`: social workout feed and athlete updates; served at `/`
 - `index.html`: dashboard, nutrition, activity, and recent sessions
 - `workout.html`: Push/Pull/Legs sessions, set tracking, timers, notes, and save/exit actions
 - `exercises.html`: searchable and filterable exercise database
